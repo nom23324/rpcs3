@@ -136,7 +136,14 @@ namespace rsx
 				RSX(ctx)->sync_point_request.release(true);
 			}
 
-			const u32 addr = get_address(offset, ctxt);
+			// R3FIX: same tolerance as semaphore_acquire - do not throw on a bogus address.
+			const u32 addr = get_address(offset, ctxt, 1);
+
+			if (!addr)
+			{
+				rsx_log.error("R3FIX semaphore_release: bad semaphore address, skipping (offset=0x%x, dma=0x%x)", offset, ctxt);
+				return;
+			}
 
 			// TODO: Check if possible to write on reservations
 			if (RSX(ctx)->label_addr >> 28 != addr >> 28)
