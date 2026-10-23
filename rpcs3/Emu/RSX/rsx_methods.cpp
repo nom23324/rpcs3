@@ -25,10 +25,13 @@ namespace rsx
 		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 
-		if (g_cfg.core.rsx_fifo_accuracy != rsx_fifo_mode::as_ps3)
-		{
-			RSX(ctx)->recover_fifo();
-		}
+		// R3FIX: do NOT recover the FIFO here.
+		// The argument count has already been consumed correctly by the FIFO reader, so the
+		// stream is not desynced - the method is simply unimplemented. Calling recover_fifo()
+		// aborts the current command scope and was observed to leave RSX surfaces unbound,
+		// crashing later in vk::as_rtt() (VKRenderTargets.h) with "Verification failed".
+		// This matches the contract stated at the top of this function: gather information
+		// and ignore broken/garbage commands.
 	}
 
 	static void trace_method(context* /*ctx*/, u32 reg, u32 arg)
