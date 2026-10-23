@@ -843,7 +843,7 @@ namespace gcm
 		// R3FIX: bit 28 is a flag, not part of the offset. Resistance 3 emits OLD_JUMP with bit 28 set,
 		// which under the 29-bit mask pointed 3x outside the mapped io window (0x1A791000 vs
 		// 0xB800000 max). Masking to 28 bits yields 0x0A791000, inside the game's window.
-		RSX_METHOD_OLD_JUMP_OFFSET_MASK = 0x0ffffffc,
+		RSX_METHOD_OLD_JUMP_OFFSET_MASK = 0x1ffffffc,
 
 		RSX_METHOD_INCREMENT_CMD_MASK = 0xe0030003,
 		RSX_METHOD_INCREMENT_CMD = 0,
