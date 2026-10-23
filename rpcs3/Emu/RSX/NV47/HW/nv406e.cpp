@@ -24,7 +24,19 @@ namespace rsx
 		void semaphore_acquire(context* ctx, u32 /*reg*/, u32 arg)
 		{
 			RSX(ctx)->sync_point_request.release(true);
-			const u32 addr = get_address(REGS(ctx)->semaphore_offset_406e(), REGS(ctx)->semaphore_context_dma_406e());
+
+			// R3FIX: allow failure (returns 0) instead of throwing and killing the RSX thread.
+			// Resistance 3 writes a 64-register block starting at offset 0x0 which ends up
+			// clobbering NV406E semaphore_offset/context_dma with plain guest addresses.
+			const u32 r3_sema_off = REGS(ctx)->semaphore_offset_406e();
+			const u32 r3_sema_dma = REGS(ctx)->semaphore_context_dma_406e();
+			const u32 addr = get_address(r3_sema_off, r3_sema_dma, 1);
+
+			if (!addr)
+			{
+				rsx_log.error("R3FIX semaphore_acquire: bad semaphore address, skipping (offset=0x%x, dma=0x%x)", r3_sema_off, r3_sema_dma);
+				return;
+			}
 
 			// Syncronization point, may be associated with memory changes without actually changing addresses
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
