@@ -725,6 +725,14 @@ namespace rsx
 		fifo_ctrl->read(command);
 		const auto cmd = command.reg;
 
+		// R3DBG: remember the last decoded commands so a desync can be inspected.
+		struct r3_fifo_hist_entry { u32 pos; u32 reg; u32 value; };
+		static r3_fifo_hist_entry r3_fifo_hist[48]{};
+		static u32 r3_fifo_hist_n = 0;
+		static u32 r3_fifo_dumps = 0;
+		r3_fifo_hist[r3_fifo_hist_n % 48] = { fifo_ctrl->get_pos(), command.reg, command.value };
+		r3_fifo_hist_n++;
+
 		if (cmd & (0xffff0000 | RSX_METHOD_NON_METHOD_CMD_MASK)) [[unlikely]]
 		{
 			// Check for special FIFO commands
@@ -762,6 +770,20 @@ namespace rsx
 			case FIFO::FIFO_ERROR:
 			{
 				rsx_log.error("FIFO error: possible desync event (last cmd = 0x%x)", get_fifo_cmd());
+
+				// R3DBG: dump the commands leading up to the first few desyncs.
+				if (r3_fifo_dumps++ < 5)
+				{
+					const u32 cnt = r3_fifo_hist_n < 48 ? r3_fifo_hist_n : 48u;
+					rsx_log.error("R3DBG desync history (%u commands):", cnt);
+					for (u32 k = 0; k < cnt; k++)
+					{
+						const u32 idx = (r3_fifo_hist_n + 48 - cnt + k) % 48;
+						const auto& e = r3_fifo_hist[idx];
+						rsx_log.error("R3DBG   pos=0x%x reg=0x%x value=0x%x", e.pos, e.reg, e.value);
+					}
+				}
+
 				recover_fifo();
 				return;
 			}
