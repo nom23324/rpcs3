@@ -943,7 +943,17 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 		return {CELL_EINVAL, addr};
 	}
 
-	if (!area->dealloc(addr, &shm.second))
+	// R3FIX: Resistance 3 keeps a 183MB arena mapped at 0x30000000-0x3FFFFFFF for RSX.
+	// It unmaps+frees the last 1MB block (0x3B700000) during setup, then later reads it,
+	// which faults (VM: Access violation reading location 0x3b700000).
+	// Keep the mapping alive inside that window so the stale read returns the old shm.
+	const bool r3_rsx_window = (addr >= 0x30000000u && addr < 0x40000000u);
+
+	if (r3_rsx_window)
+	{
+		sys_mmapper.error("R3FIX keep mapping at 0x%x (dealloc skipped)", addr);
+	}
+	else if (!area->dealloc(addr, &shm.second))
 	{
 		return {CELL_EINVAL, addr};
 	}
