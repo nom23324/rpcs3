@@ -776,6 +776,24 @@ namespace rsx
 				{
 					const u32 cnt = r3_fifo_hist_n < 48 ? r3_fifo_hist_n : 48u;
 					rsx_log.error("R3DBG desync history (%u commands):", cnt);
+
+					// R3DBG: FIFO pointers at desync time
+					const u32 r3_get = fifo_ctrl->get_pos();
+					rsx_log.error("R3DBG   get=0x%x put=0x%x last_cmd=0x%x", r3_get, fifo_ctrl->read_put(), get_fifo_cmd());
+
+					// R3DBG: raw words around the faulting position
+					for (s32 k = -8; k < 8; k++)
+					{
+						const u32 a = static_cast<u32>(static_cast<s32>(r3_get) + k * 4);
+						if (vm::check_addr(a))
+						{
+							rsx_log.error("R3DBG   mem[0x%x] = 0x%x", a, vm::read32(a));
+						}
+						else
+						{
+							rsx_log.error("R3DBG   mem[0x%x] = <unmapped>", a);
+						}
+					}
 					for (u32 k = 0; k < cnt; k++)
 					{
 						const u32 idx = (r3_fifo_hist_n + 48 - cnt + k) % 48;
